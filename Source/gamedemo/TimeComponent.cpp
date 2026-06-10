@@ -28,9 +28,15 @@ void UTimeComponent::BeginPlay()
         Owner = GetOwner();
         IsInit = true;
         AMyThirdPersonCharacter* myHero = Cast<AMyThirdPersonCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
-        myHero->TimeReverseDelegate.AddDynamic(this, &UTimeComponent::SetTimeReversing);
+        if (myHero)
+        {
+            myHero->TimeReverseDelegate.AddDynamic(this, &UTimeComponent::SetTimeReversing);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("TimeComponent: Could not find MyThirdPersonCharacter!"));
+        }
     }
-
 }
 
 
