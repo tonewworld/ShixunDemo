@@ -13,7 +13,7 @@ AMyThirdPersonCharacter::AMyThirdPersonCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // ´´½¨µ¯»É±Û×é¼þ
+    // åˆ›å»ºå¼¹ç°§è‡‚ç»„ä»¶
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(RootComponent);
 
@@ -24,7 +24,7 @@ AMyThirdPersonCharacter::AMyThirdPersonCharacter()
     CameraBoom->bInheritYaw = true;
     CameraBoom->bInheritRoll = false;
 
-    // ´´½¨Ïà»ú
+    // åˆ›å»ºç›¸æœº
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
     FollowCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 60.0f));
@@ -88,9 +88,8 @@ void AMyThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
     PlayerInputComponent->BindAction("TimeReverse", IE_Pressed, this, &AMyThirdPersonCharacter::StartTimeReverse);
     PlayerInputComponent->BindAction("TimeReverse", IE_Released, this, &AMyThirdPersonCharacter::StopTimeReverse);
     PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &AMyThirdPersonCharacter::OnGrabPressed);
-    PlayerInputComponent->BindAction("Grab", IE_Released, this, &AMyThirdPersonCharacter::OnGrabReleased);
 
-    // ========== ÐÂÔö£º°ó¶¨ÍÆ/À­¶¯×÷£¨ÐèÒªÔÚÏîÄ¿ÊäÈëÉèÖÃÖÐÊÖ¶¯Ìí¼Ó Push / Pull£© ==========
+    // ========== æ–°å¢žï¼šç»‘å®šæŽ¨/æ‹‰åŠ¨ä½œï¼ˆéœ€è¦åœ¨é¡¹ç›®è¾“å…¥è®¾ç½®ä¸­æ‰‹åŠ¨æ·»åŠ  Push / Pullï¼‰ ==========
     PlayerInputComponent->BindAction("Push", IE_Pressed, this, &AMyThirdPersonCharacter::OnPushPressed);
     PlayerInputComponent->BindAction("Push", IE_Released, this, &AMyThirdPersonCharacter::OnPushReleased);
     PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AMyThirdPersonCharacter::OnPullPressed);
@@ -158,25 +157,32 @@ void AMyThirdPersonCharacter::StopTimeReverse()
 
 void AMyThirdPersonCharacter::OnGrabPressed()
 {
-    if (CrosshairWidgetInstance && !CrosshairWidgetInstance->IsInViewport())
-    {
-        CrosshairWidgetInstance->AddToViewport();
-    }
-    bIsGrabKeyHeld = true;
+	if (!GrabComponent) return;
+
+	// æŒ‰ä¸€ä¸‹Fåˆ‡æ¢ï¼šå¦‚æžœå·²æŠ“ä½ç‰©ä½“åˆ™é‡Šæ”¾ï¼Œå¦åˆ™è¿›å…¥æŠ“å–æ¨¡å¼
+	if (GrabComponent->IsGrabbing())
+	{
+		GrabComponent->ReleaseGrab();
+		bIsGrabKeyHeld = false;
+		if (CrosshairWidgetInstance && CrosshairWidgetInstance->IsInViewport())
+		{
+			CrosshairWidgetInstance->RemoveFromViewport();
+		}
+		SetCrosshairColor(FLinearColor::White);
+	}
+	else
+	{
+		bIsGrabKeyHeld = true;
+		if (CrosshairWidgetInstance && !CrosshairWidgetInstance->IsInViewport())
+		{
+			CrosshairWidgetInstance->AddToViewport();
+		}
+	}
 }
 
 void AMyThirdPersonCharacter::OnGrabReleased()
 {
-    if (CrosshairWidgetInstance && CrosshairWidgetInstance->IsInViewport())
-    {
-        CrosshairWidgetInstance->RemoveFromViewport();
-    }
-    bIsGrabKeyHeld = false;
-    if (GrabComponent)
-    {
-        GrabComponent->ReleaseGrab();
-    }
-    SetCrosshairColor(FLinearColor::White);
+	// ä¸å†ä½¿ç”¨ï¼Œä¿ç•™ç©ºå®žçŽ°é˜²æ­¢ç¼–è¯‘è­¦å‘Š
 }
 
 void AMyThirdPersonCharacter::UpdateGrab()
@@ -203,7 +209,20 @@ void AMyThirdPersonCharacter::OnGrabSuccess()
     SetCrosshairColor(FLinearColor::Green);
 }
 
-// ========== ÐÂÔö£ºÍÆ/À­»Øµ÷ÊµÏÖ ==========
+// ========== èƒ½é‡UIè½¬å‘å‡½æ•°å®žçŽ° ==========
+float AMyThirdPersonCharacter::GetTimeEnergyPercentage() const
+{
+    if (!myTimeComponent) return 0.0f;
+    return myTimeComponent->GetEnergyPercentage();
+}
+
+bool AMyThirdPersonCharacter::IsTimeReversing() const
+{
+    if (!myTimeComponent) return false;
+    return myTimeComponent->IsReversing();
+}
+
+// ========== æ–°å¢žï¼šæŽ¨/æ‹‰å›žè°ƒå®žçŽ° ==========
 void AMyThirdPersonCharacter::OnPushPressed()
 {
     if (GrabComponent && GrabComponent->IsGrabbing())

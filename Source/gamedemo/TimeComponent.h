@@ -40,11 +40,33 @@ public:
 	bool isTimeReversing;
 	bool isOutData;
 	float RecordTimeLength;
+	float MaxRecordTime;
 	TDoubleLinkedList<TimeInfo> TimeFrames;
 
 	UFUNCTION()
 		void SetTimeReversing(bool InTimeReversing);
 
 	UPROPERTY(EditAnywhere, Category = "TimeComponentInfo")
-		int32 ReverseSpeed;//�����ٶ�
+		int32 ReverseSpeed;
+
+	// ====== 能量系统 ======
+	UPROPERTY(EditAnywhere, Category = "TimeEnergy")
+		float MaxEnergy;
+
+	UPROPERTY(VisibleAnywhere, Category = "TimeEnergy")
+		float CurrentEnergy;
+
+	UPROPERTY(EditAnywhere, Category = "TimeEnergy")
+		float EnergyDrainRate;
+
+	UPROPERTY(EditAnywhere, Category = "TimeEnergy")
+		float EnergyRestoreRate;
+
+	// 蓝图函数：获取能量百分比（0~1），用于UI进度条绑定
+	UFUNCTION(BlueprintPure, Category = "TimeEnergy")
+		float GetEnergyPercentage() const;
+
+	// 蓝图函数：是否正在回溯，用于UI颜色切换
+	UFUNCTION(BlueprintPure, Category = "TimeEnergy")
+		bool IsReversing() const { return isTimeReversing; }
 };
