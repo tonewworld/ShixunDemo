@@ -21,6 +21,7 @@ public:
 protected:
     virtual void BeginPlay() override;
     bool bIsGrabKeyHeld = false;
+    bool bWasReversingLastFrame = false;
 
 public:
     virtual void Tick(float DeltaTime) override;
@@ -47,6 +48,16 @@ public:
     void StartTimeReverse();
     void StopTimeReverse();
     FTimeReverseDelegate TimeReverseDelegate;
+
+    // CD 系统
+    UPROPERTY(EditAnywhere, Category = "Cooldown")
+        float TimeRewindCooldown;
+
+    UPROPERTY(VisibleAnywhere, Category = "Cooldown")
+        float TimeRewindCooldownRemaining;
+
+    UFUNCTION(BlueprintPure, Category = "Cooldown")
+        float GetTimeRewindCooldownPercentage() const;
 
     // 时间回溯组件
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TimeComponentInfo")
@@ -84,12 +95,7 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Health")
         FOnHealthChanged OnHealthChanged;
 
-    // ========== 能量UI转发函数 ==========
-    UFUNCTION(BlueprintPure, Category = "TimeEnergy")
-        float GetTimeEnergyPercentage() const;
-
-    UFUNCTION(BlueprintPure, Category = "TimeEnergy")
-        bool IsTimeReversing() const;
+    bool IsTimeReversing() const;
 
     // ========== 推/拉回调 ==========
     void OnPushPressed();

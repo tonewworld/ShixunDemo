@@ -38,6 +38,9 @@ AShixunCharacter::AShixunCharacter()
 
     myTimeComponent = CreateDefaultSubobject<UTimeComponent>(TEXT("myTimeComponent"));
     GrabComponent = CreateDefaultSubobject<UGrabComponent>(TEXT("GrabComponent"));
+
+    TimeRewindCooldown = 5.0f;
+    TimeRewindCooldownRemaining = 0.0f;
 }
 
 void AShixunCharacter::BeginPlay()
@@ -60,6 +63,31 @@ void AShixunCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     UpdateGrab();
+
+    // 回溯结束检测（松开 Q 或能量耗尽）→ 触发 CD
+    if (myTimeComponent)
+    {
+        bool bIsNowReversing = myTimeComponent->isTimeReversing;
+        if (bWasReversingLastFrame && !bIsNowReversing)
+        {
+            TimeRewindCooldownRemaining = TimeRewindCooldown;
+        }
+        bWasReversingLastFrame = bIsNowReversing;
+    }
+
+    // CD 递减
+    if (TimeRewindCooldownRemaining > 0)
+        TimeRewindCooldownRemaining -= DeltaTime;
+
+    // 回溯时相机跟随历史朝向
+    if (myTimeComponent && myTimeComponent->isTimeReversing && Controller)
+    {
+        auto TailNode = myTimeComponent->TimeFrames.GetTail();
+        if (TailNode)
+        {
+            Controller->SetControlRotation(TailNode->GetValue().Rotation);
+        }
+    }
 }
 
 void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -106,11 +134,13 @@ void AShixunCharacter::MoveRight(float Value)
 
 void AShixunCharacter::Turn(float Value)
 {
+    if (myTimeComponent && myTimeComponent->isTimeReversing) return;
     AddControllerYawInput(Value);
 }
 
 void AShixunCharacter::LookUp(float Value)
 {
+    if (myTimeComponent && myTimeComponent->isTimeReversing) return;
     AddControllerPitchInput(Value);
 }
 
@@ -133,6 +163,8 @@ void AShixunCharacter::TestDamage()
 
 void AShixunCharacter::StartTimeReverse()
 {
+    // CD 中则不可回溯
+    if (TimeRewindCooldownRemaining > 0) return;
     myTimeComponent->isTimeReversing = true;
     TimeReverseDelegate.Broadcast(true);
 }
@@ -192,10 +224,10 @@ void AShixunCharacter::OnGrabSuccess()
     SetCrosshairColor(FLinearColor::Green);
 }
 
-float AShixunCharacter::GetTimeEnergyPercentage() const
+float AShixunCharacter::GetTimeRewindCooldownPercentage() const
 {
-    if (!myTimeComponent) return 0.0f;
-    return myTimeComponent->GetEnergyPercentage();
+    if (TimeRewindCooldown <= 0.0f) return 0.0f;
+    return FMath::Clamp(TimeRewindCooldownRemaining / TimeRewindCooldown, 0.0f, 1.0f);
 }
 
 bool AShixunCharacter::IsTimeReversing() const
