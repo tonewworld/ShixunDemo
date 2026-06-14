@@ -16,17 +16,13 @@ class GAMEDEMO_API UGrabComponent : public UActorComponent
 public:
     UGrabComponent();
 
-protected:
-    virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-public:
     void StartGrab();
-    void TryGrab();
     void ReleaseGrab();
     bool IsGrabbing() const { return GrabbedActor != nullptr; }
 
-    // ========== ÐÂÔö£ºÍÆ/À­¿ØÖÆ ==========
+    // ========== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ==========
     void StartPush();
     void StopPush();
     void StartPull();
@@ -50,12 +46,12 @@ private:
 
     float GrabDistance = 0.0f;
 
-    // ========== ÐÂÔö£ºÍÆ/À­×´Ì¬Óë²ÎÊý ==========
+    // ========== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ ==========
     bool bIsPushing = false;
     bool bIsPulling = false;
 
     UPROPERTY(EditAnywhere, Category = "PushPull")
-        float PushPullSpeed = 200.0f;   // ¾àÀë±ä»¯ËÙ¶È£¨µ¥Î»/Ãë£©
+        float PushPullSpeed = 200.0f;   // ï¿½ï¿½ï¿½ï¿½ä»¯ï¿½Ù¶È£ï¿½ï¿½ï¿½Î»/ï¿½ë£©
 
     UPROPERTY(EditAnywhere, Category = "PushPull")
         float MinGrabDistance = 50.0f;

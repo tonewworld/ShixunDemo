@@ -1,5 +1,5 @@
 #include "TimeComponent.h"
-#include "MyThirdPersonCharacter.h"
+#include "ShixunCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/StaticMeshComponent.h"
 
@@ -32,14 +32,14 @@ void UTimeComponent::BeginPlay()
     if (!IsInit) {
         Owner = GetOwner();
         IsInit = true;
-        AMyThirdPersonCharacter* myHero = Cast<AMyThirdPersonCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+        AShixunCharacter* myHero = Cast<AShixunCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
         if (myHero)
         {
             myHero->TimeReverseDelegate.AddDynamic(this, &UTimeComponent::SetTimeReversing);
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("TimeComponent: Could not find MyThirdPersonCharacter!"));
+            UE_LOG(LogTemp, Error, TEXT("TimeComponent: Could not find ShixunCharacter!"));
         }
     }
 }

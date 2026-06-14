@@ -13,12 +13,9 @@ public class gamedemo : ModuleRules
             "CoreUObject",
             "Engine",
             "InputCore",
-            "HeadMountedDisplay",
-            "NavigationSystem",
-            "AIModule",
-            "UMG",          // 添加 UMG 支持（UUserWidget）
-            "Slate",        // UMG 依赖的基础 UI 模块
-            "SlateCore"     // Slate 核心
+            "UMG",
+            "Slate",
+            "SlateCore"
         });
     }
 }

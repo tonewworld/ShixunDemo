@@ -2,9 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Math/Vector.h"
-#include "Math/Rotator.h"
-#include "Containers/List.h"
 #include "TimeComponent.generated.h"
 
 struct TimeInfo {

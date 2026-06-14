@@ -19,6 +19,9 @@ Build/
 # 但保留这些关键目录的空结构（可选）
 !Build/**/*.ico
 
+# 项目文档（不提交到仓库）
+doc/
+
 # 操作系统文件
 .DS_Store
 Thumbs.db

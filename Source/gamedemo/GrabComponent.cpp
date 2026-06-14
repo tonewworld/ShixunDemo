@@ -2,7 +2,6 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
 #include "Components/PrimitiveComponent.h"
-#include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "MagneticInteractable.h"
@@ -12,47 +11,40 @@ UGrabComponent::UGrabComponent()
     PrimaryComponentTick.bCanEverTick = true;
 }
 
-void UGrabComponent::BeginPlay()
-{
-    Super::BeginPlay();
-}
-
 void UGrabComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    if (GrabbedComponent && GrabbedActor)
+    if (!GrabbedComponent || !GrabbedActor) return;
+
+    UCameraComponent* Camera = GetPlayerCamera();
+    if (Camera)
     {
-        UCameraComponent* Camera = GetPlayerCamera();
-        if (Camera)
+        // 根据推/拉调整抓取距离
+        if (bIsPushing)
         {
-            // ========== 新增：根据推/拉调整抓取距离 ==========
-            if (bIsPushing)
-            {
-                GrabDistance += PushPullSpeed * DeltaTime;
-            }
-            else if (bIsPulling)
-            {
-                GrabDistance -= PushPullSpeed * DeltaTime;
-            }
-            GrabDistance = FMath::Clamp(GrabDistance, MinGrabDistance, MaxGrabDistance);
+            GrabDistance += PushPullSpeed * DeltaTime;
+        }
+        else if (bIsPulling)
+        {
+            GrabDistance -= PushPullSpeed * DeltaTime;
+        }
+        GrabDistance = FMath::Clamp(GrabDistance, MinGrabDistance, MaxGrabDistance);
 
-            // 计算目标位置（相机前方 GrabDistance 距离）
-            FVector TargetLocation = Camera->GetComponentLocation() + Camera->GetForwardVector() * GrabDistance;
+        // 计算目标位置（相机前方 GrabDistance 距离）
+        FVector TargetLocation = Camera->GetComponentLocation() + Camera->GetForwardVector() * GrabDistance;
 
-            // 原有的移动逻辑（保持不变）
-            if (bUsePhysics)
-            {
-                FVector CurrentLoc = GrabbedComponent->GetComponentLocation();
-                FVector Delta = TargetLocation - CurrentLoc;
-                FVector Velocity = Delta / DeltaTime;
-                Velocity = Velocity.GetClampedToMaxSize(800.0f);
-                GrabbedComponent->SetPhysicsLinearVelocity(Velocity, false);
-            }
-            else
-            {
-                GrabbedComponent->SetWorldLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
-            }
+        if (bUsePhysics)
+        {
+            FVector CurrentLoc = GrabbedComponent->GetComponentLocation();
+            FVector Delta = TargetLocation - CurrentLoc;
+            FVector Velocity = Delta / DeltaTime;
+            Velocity = Velocity.GetClampedToMaxSize(800.0f);
+            GrabbedComponent->SetPhysicsLinearVelocity(Velocity, false);
+        }
+        else
+        {
+            GrabbedComponent->SetWorldLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
         }
     }
 }
@@ -116,12 +108,6 @@ void UGrabComponent::StartGrab()
             GrabbedComponent->SetAngularDamping(5.0f);
         }
     }
-}
-
-void UGrabComponent::TryGrab()
-{
-    if (IsGrabbing()) return;
-    StartGrab();
 }
 
 void UGrabComponent::ReleaseGrab()

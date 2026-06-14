@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Blueprint/UserWidget.h"
-#include "MyThirdPersonCharacter.generated.h"
+#include "ShixunCharacter.generated.h"
 
 class UGrabComponent;
 
@@ -11,12 +11,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, float, CurrentHea
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTimeReverseDelegate, bool, IsTimeReversing);
 
 UCLASS()
-class GAMEDEMO_API AMyThirdPersonCharacter : public ACharacter
+class GAMEDEMO_API AShixunCharacter : public ACharacter
 {
     GENERATED_BODY()
 
 public:
-    AMyThirdPersonCharacter();
+    AShixunCharacter();
 
 protected:
     virtual void BeginPlay() override;
@@ -28,7 +28,6 @@ public:
 
     // 抓取 UI 控制
     void OnGrabPressed();
-    void OnGrabReleased();
 
     // 抓取成功时的回调（由 GrabComponent 的委托触发）
     UFUNCTION()

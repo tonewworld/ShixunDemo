@@ -1,4 +1,4 @@
-#include "MyThirdPersonCharacter.h"
+#include "ShixunCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -9,7 +9,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/UserWidget.h"
 
-AMyThirdPersonCharacter::AMyThirdPersonCharacter()
+AShixunCharacter::AShixunCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
@@ -51,7 +51,7 @@ AMyThirdPersonCharacter::AMyThirdPersonCharacter()
     GrabComponent = CreateDefaultSubobject<UGrabComponent>(TEXT("GrabComponent"));
 }
 
-void AMyThirdPersonCharacter::BeginPlay()
+void AShixunCharacter::BeginPlay()
 {
     Super::BeginPlay();
     OnHealthChanged.Broadcast(Health, MaxHealth);
@@ -63,40 +63,40 @@ void AMyThirdPersonCharacter::BeginPlay()
     }
     if (GrabComponent)
     {
-        GrabComponent->OnGrabSuccess.AddDynamic(this, &AMyThirdPersonCharacter::OnGrabSuccess);
+        GrabComponent->OnGrabSuccess.AddDynamic(this, &AShixunCharacter::OnGrabSuccess);
     }
 }
 
-void AMyThirdPersonCharacter::Tick(float DeltaTime)
+void AShixunCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     UpdateGrab();
 }
 
-void AMyThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    PlayerInputComponent->BindAxis("MoveForward", this, &AMyThirdPersonCharacter::MoveForward);
-    PlayerInputComponent->BindAxis("MoveRight", this, &AMyThirdPersonCharacter::MoveRight);
-    PlayerInputComponent->BindAxis("Turn", this, &AMyThirdPersonCharacter::Turn);
-    PlayerInputComponent->BindAxis("LookUp", this, &AMyThirdPersonCharacter::LookUp);
+    PlayerInputComponent->BindAxis("MoveForward", this, &AShixunCharacter::MoveForward);
+    PlayerInputComponent->BindAxis("MoveRight", this, &AShixunCharacter::MoveRight);
+    PlayerInputComponent->BindAxis("Turn", this, &AShixunCharacter::Turn);
+    PlayerInputComponent->BindAxis("LookUp", this, &AShixunCharacter::LookUp);
 
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-    PlayerInputComponent->BindAction("TestDamage", IE_Pressed, this, &AMyThirdPersonCharacter::TestDamage);
-    PlayerInputComponent->BindAction("TimeReverse", IE_Pressed, this, &AMyThirdPersonCharacter::StartTimeReverse);
-    PlayerInputComponent->BindAction("TimeReverse", IE_Released, this, &AMyThirdPersonCharacter::StopTimeReverse);
-    PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &AMyThirdPersonCharacter::OnGrabPressed);
+    PlayerInputComponent->BindAction("TestDamage", IE_Pressed, this, &AShixunCharacter::TestDamage);
+    PlayerInputComponent->BindAction("TimeReverse", IE_Pressed, this, &AShixunCharacter::StartTimeReverse);
+    PlayerInputComponent->BindAction("TimeReverse", IE_Released, this, &AShixunCharacter::StopTimeReverse);
+    PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &AShixunCharacter::OnGrabPressed);
 
     // ========== 新增：绑定推/拉动作（需要在项目输入设置中手动添加 Push / Pull） ==========
-    PlayerInputComponent->BindAction("Push", IE_Pressed, this, &AMyThirdPersonCharacter::OnPushPressed);
-    PlayerInputComponent->BindAction("Push", IE_Released, this, &AMyThirdPersonCharacter::OnPushReleased);
-    PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AMyThirdPersonCharacter::OnPullPressed);
-    PlayerInputComponent->BindAction("Pull", IE_Released, this, &AMyThirdPersonCharacter::OnPullReleased);
+    PlayerInputComponent->BindAction("Push", IE_Pressed, this, &AShixunCharacter::OnPushPressed);
+    PlayerInputComponent->BindAction("Push", IE_Released, this, &AShixunCharacter::OnPushReleased);
+    PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AShixunCharacter::OnPullPressed);
+    PlayerInputComponent->BindAction("Pull", IE_Released, this, &AShixunCharacter::OnPullReleased);
 }
 
-void AMyThirdPersonCharacter::MoveForward(float Value)
+void AShixunCharacter::MoveForward(float Value)
 {
     if (Controller && Value != 0.0f)
     {
@@ -106,7 +106,7 @@ void AMyThirdPersonCharacter::MoveForward(float Value)
     }
 }
 
-void AMyThirdPersonCharacter::MoveRight(float Value)
+void AShixunCharacter::MoveRight(float Value)
 {
     if (Controller && Value != 0.0f)
     {
@@ -116,17 +116,17 @@ void AMyThirdPersonCharacter::MoveRight(float Value)
     }
 }
 
-void AMyThirdPersonCharacter::Turn(float Value)
+void AShixunCharacter::Turn(float Value)
 {
     AddControllerYawInput(Value);
 }
 
-void AMyThirdPersonCharacter::LookUp(float Value)
+void AShixunCharacter::LookUp(float Value)
 {
     AddControllerPitchInput(Value);
 }
 
-void AMyThirdPersonCharacter::ApplyDamage(float DamageAmount)
+void AShixunCharacter::ApplyDamage(float DamageAmount)
 {
     if (DamageAmount <= 0.0f) return;
     Health = FMath::Clamp(Health - DamageAmount, 0.0f, MaxHealth);
@@ -137,25 +137,25 @@ void AMyThirdPersonCharacter::ApplyDamage(float DamageAmount)
     }
 }
 
-void AMyThirdPersonCharacter::TestDamage()
+void AShixunCharacter::TestDamage()
 {
     ApplyDamage(10.0f);
     UE_LOG(LogTemp, Log, TEXT("TestDamage called. Current Health: %f / %f"), Health, MaxHealth);
 }
 
-void AMyThirdPersonCharacter::StartTimeReverse()
+void AShixunCharacter::StartTimeReverse()
 {
     myTimeComponent->isTimeReversing = true;
     TimeReverseDelegate.Broadcast(true);
 }
 
-void AMyThirdPersonCharacter::StopTimeReverse()
+void AShixunCharacter::StopTimeReverse()
 {
     myTimeComponent->isTimeReversing = false;
     TimeReverseDelegate.Broadcast(false);
 }
 
-void AMyThirdPersonCharacter::OnGrabPressed()
+void AShixunCharacter::OnGrabPressed()
 {
 	if (!GrabComponent) return;
 
@@ -180,21 +180,16 @@ void AMyThirdPersonCharacter::OnGrabPressed()
 	}
 }
 
-void AMyThirdPersonCharacter::OnGrabReleased()
-{
-	// 不再使用，保留空实现防止编译警告
-}
-
-void AMyThirdPersonCharacter::UpdateGrab()
+void AShixunCharacter::UpdateGrab()
 {
     if (!GrabComponent) return;
     if (bIsGrabKeyHeld)
     {
-        GrabComponent->TryGrab();
+        GrabComponent->StartGrab();
     }
 }
 
-void AMyThirdPersonCharacter::SetCrosshairColor(const FLinearColor& Color)
+void AShixunCharacter::SetCrosshairColor(const FLinearColor& Color)
 {
     if (!CrosshairWidgetInstance) return;
     UImage* CrosshairImage = Cast<UImage>(CrosshairWidgetInstance->WidgetTree->FindWidget(FName("Image_1")));
@@ -204,26 +199,26 @@ void AMyThirdPersonCharacter::SetCrosshairColor(const FLinearColor& Color)
     }
 }
 
-void AMyThirdPersonCharacter::OnGrabSuccess()
+void AShixunCharacter::OnGrabSuccess()
 {
     SetCrosshairColor(FLinearColor::Green);
 }
 
 // ========== 能量UI转发函数实现 ==========
-float AMyThirdPersonCharacter::GetTimeEnergyPercentage() const
+float AShixunCharacter::GetTimeEnergyPercentage() const
 {
     if (!myTimeComponent) return 0.0f;
     return myTimeComponent->GetEnergyPercentage();
 }
 
-bool AMyThirdPersonCharacter::IsTimeReversing() const
+bool AShixunCharacter::IsTimeReversing() const
 {
     if (!myTimeComponent) return false;
     return myTimeComponent->IsReversing();
 }
 
 // ========== 新增：推/拉回调实现 ==========
-void AMyThirdPersonCharacter::OnPushPressed()
+void AShixunCharacter::OnPushPressed()
 {
     if (GrabComponent && GrabComponent->IsGrabbing())
     {
@@ -231,7 +226,7 @@ void AMyThirdPersonCharacter::OnPushPressed()
     }
 }
 
-void AMyThirdPersonCharacter::OnPushReleased()
+void AShixunCharacter::OnPushReleased()
 {
     if (GrabComponent)
     {
@@ -239,7 +234,7 @@ void AMyThirdPersonCharacter::OnPushReleased()
     }
 }
 
-void AMyThirdPersonCharacter::OnPullPressed()
+void AShixunCharacter::OnPullPressed()
 {
     if (GrabComponent && GrabComponent->IsGrabbing())
     {
@@ -247,7 +242,7 @@ void AMyThirdPersonCharacter::OnPullPressed()
     }
 }
 
-void AMyThirdPersonCharacter::OnPullReleased()
+void AShixunCharacter::OnPullReleased()
 {
     if (GrabComponent)
     {
