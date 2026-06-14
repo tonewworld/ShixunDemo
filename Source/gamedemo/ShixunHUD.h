@@ -29,16 +29,26 @@ public:
     UFUNCTION(BlueprintPure, Category = "HUD")
     bool IsTimeRewindReady() const;
 
-    // ===== 磁力抓取（0 CD，始终可用） =====
+    // ===== 视野扫描 CD =====
+    UFUNCTION(BlueprintPure, Category = "HUD")
+    float GetVisionScanCooldownPercent() const;
+
+    UFUNCTION(BlueprintPure, Category = "HUD")
+    bool IsVisionScanReady() const;
+
+    // ===== 磁力抓取（0 CD） =====
     UFUNCTION(BlueprintPure, Category = "HUD")
     bool IsGrabReady() const;
 
-    // ===== 技能图标颜色（白=可用，灰=CD中） =====
+    // ===== 技能图标颜色 =====
     UFUNCTION(BlueprintPure, Category = "HUD")
     FLinearColor GetTimeRewindIconColor() const;
 
     UFUNCTION(BlueprintPure, Category = "HUD")
     FLinearColor GetGrabIconColor() const;
+
+    UFUNCTION(BlueprintPure, Category = "HUD")
+    FLinearColor GetVisionScanIconColor() const;
 
 private:
     AShixunCharacter* GetPlayerCharacter() const;

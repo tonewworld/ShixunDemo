@@ -7,6 +7,7 @@
 #include "Components/Image.h"
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
 
 AShixunCharacter::AShixunCharacter()
 {
@@ -41,6 +42,12 @@ AShixunCharacter::AShixunCharacter()
 
     TimeRewindCooldown = 5.0f;
     TimeRewindCooldownRemaining = 0.0f;
+
+    CurrentState = EAbilityState::Default;
+    VisionScanDuration = 3.0f;
+    VisionScanCooldown = 3.0f;
+    VisionScanTimer = 0.0f;
+    VisionScanCooldownRemaining = 0.0f;
 }
 
 void AShixunCharacter::BeginPlay()
@@ -64,29 +71,56 @@ void AShixunCharacter::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
     UpdateGrab();
 
-    // 回溯结束检测（松开 Q 或能量耗尽）→ 触发 CD
-    if (myTimeComponent)
+    // ===== 状态机 =====
+    switch (CurrentState)
     {
-        bool bIsNowReversing = myTimeComponent->isTimeReversing;
-        if (bWasReversingLastFrame && !bIsNowReversing)
+    case EAbilityState::TimeRewind:
+        // 回溯结束检测 → 触发 CD
+        if (myTimeComponent)
         {
-            TimeRewindCooldownRemaining = TimeRewindCooldown;
+            bool bIsNowReversing = myTimeComponent->isTimeReversing;
+            if (bWasReversingLastFrame && !bIsNowReversing)
+            {
+                TimeRewindCooldownRemaining = TimeRewindCooldown;
+                CurrentState = EAbilityState::Default;
+            }
+            bWasReversingLastFrame = bIsNowReversing;
         }
-        bWasReversingLastFrame = bIsNowReversing;
-    }
 
-    // CD 递减
-    if (TimeRewindCooldownRemaining > 0)
-        TimeRewindCooldownRemaining -= DeltaTime;
+        // CD 递减
+        if (TimeRewindCooldownRemaining > 0)
+            TimeRewindCooldownRemaining -= DeltaTime;
 
-    // 回溯时相机跟随历史朝向
-    if (myTimeComponent && myTimeComponent->isTimeReversing && Controller)
-    {
-        auto TailNode = myTimeComponent->TimeFrames.GetTail();
-        if (TailNode)
+        // 回溯时相机跟随历史朝向
+        if (myTimeComponent && myTimeComponent->isTimeReversing && Controller)
         {
-            Controller->SetControlRotation(TailNode->GetValue().Rotation);
+            auto TailNode = myTimeComponent->TimeFrames.GetTail();
+            if (TailNode)
+            {
+                Controller->SetControlRotation(TailNode->GetValue().Rotation);
+            }
         }
+        break;
+
+    case EAbilityState::VisionScan:
+        VisionScanTimer -= DeltaTime;
+        // 扫描期间每帧检测视野内的隐藏物
+        RevealHiddenObjects(true);
+        if (VisionScanTimer <= 0.0f)
+        {
+            StopVisionScan();
+        }
+
+        VisionScanCooldownRemaining -= DeltaTime;
+        break;
+
+    default:
+        // Default: 递减各种 CD
+        if (TimeRewindCooldownRemaining > 0)
+            TimeRewindCooldownRemaining -= DeltaTime;
+        if (VisionScanCooldownRemaining > 0)
+            VisionScanCooldownRemaining -= DeltaTime;
+        break;
     }
 }
 
@@ -163,16 +197,21 @@ void AShixunCharacter::TestDamage()
 
 void AShixunCharacter::StartTimeReverse()
 {
-    // CD 中则不可回溯
+    // 状态机：其他能力使用中则不可回溯
+    if (CurrentState != EAbilityState::Default) return;
     if (TimeRewindCooldownRemaining > 0) return;
+
+    CurrentState = EAbilityState::TimeRewind;
     myTimeComponent->isTimeReversing = true;
     TimeReverseDelegate.Broadcast(true);
 }
 
 void AShixunCharacter::StopTimeReverse()
 {
+    if (CurrentState != EAbilityState::TimeRewind) return;
     myTimeComponent->isTimeReversing = false;
     TimeReverseDelegate.Broadcast(false);
+    // 状态在 Tick 中检测到 isTimeReversing=false 时切换为 Default
 }
 
 void AShixunCharacter::OnGrabPressed()
@@ -258,12 +297,85 @@ void AShixunCharacter::OnPullPressed()
     {
         GrabComponent->StartPull();
     }
+    else if (CurrentState == EAbilityState::Default && VisionScanCooldownRemaining <= 0.0f)
+    {
+        StartVisionScan();
+    }
 }
 
 void AShixunCharacter::OnPullReleased()
 {
-    if (GrabComponent)
+    if (GrabComponent && GrabComponent->IsGrabbing())
     {
         GrabComponent->StopPull();
+    }
+}
+
+// ===== 视野扫描 =====
+void AShixunCharacter::StartVisionScan()
+{
+    CurrentState = EAbilityState::VisionScan;
+    VisionScanTimer = VisionScanDuration;
+    VisionScanCooldownRemaining = VisionScanDuration + VisionScanCooldown;
+    RevealHiddenObjects(true);
+
+    UE_LOG(LogTemp, Log, TEXT("Vision scan started"));
+}
+
+void AShixunCharacter::StopVisionScan()
+{
+    VisionScanTimer = 0.0f;
+    CurrentState = EAbilityState::Default;
+    RevealHiddenObjects(false);
+
+    UE_LOG(LogTemp, Log, TEXT("Vision scan ended"));
+}
+
+void AShixunCharacter::RevealHiddenObjects(bool bReveal)
+{
+    TArray<AActor*> FoundActors;
+    UGameplayStatics::GetAllActorsWithTag(this, FName("HiddenObject"), FoundActors);
+
+    if (bReveal)
+    {
+        // 仅显示屏幕视野内的隐藏物体
+        APlayerController* PC = Cast<APlayerController>(GetController());
+        if (!PC || !GetWorld()) return;
+
+        FVector CamLoc;
+        FRotator CamRot;
+        PC->GetPlayerViewPoint(CamLoc, CamRot);
+        float MaxDistance = 5000.0f;
+        float CosHalfFOV = FMath::Cos(FMath::DegreesToRadians(50.0f));
+
+        for (AActor* Actor : FoundActors)
+        {
+            FVector DirToActor = Actor->GetActorLocation() - CamLoc;
+            float Distance = DirToActor.Size();
+            if (Distance > MaxDistance) continue;
+
+            DirToActor /= Distance;
+            if (FVector::DotProduct(CamRot.Vector(), DirToActor) < CosHalfFOV) continue;
+
+            // 视线检测（无遮挡才显示）
+            FHitResult Hit;
+            FCollisionQueryParams Params;
+            Params.AddIgnoredActor(this);
+            Params.AddIgnoredActor(Actor);
+            if (GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, Actor->GetActorLocation(), ECC_Visibility, Params))
+            {
+                if (Hit.bBlockingHit) continue;
+            }
+
+            Actor->SetActorHiddenInGame(false);
+        }
+    }
+    else
+    {
+        // 扫描结束，全部重新隐藏
+        for (AActor* Actor : FoundActors)
+        {
+            Actor->SetActorHiddenInGame(true);
+        }
     }
 }

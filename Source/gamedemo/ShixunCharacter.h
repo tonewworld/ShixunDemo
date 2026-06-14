@@ -7,6 +7,14 @@
 
 class UGrabComponent;
 
+UENUM(BlueprintType)
+enum class EAbilityState : uint8
+{
+    Default         UMETA(DisplayName = "默认"),
+    TimeRewind      UMETA(DisplayName = "时间回溯"),
+    VisionScan      UMETA(DisplayName = "视野扫描"),
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTimeReverseDelegate, bool, IsTimeReversing);
 
@@ -27,29 +35,62 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-    // 抓取 UI 控制
+    // ===== 抓取 =====
     void OnGrabPressed();
-
-    // 抓取成功时的回调（由 GrabComponent 的委托触发）
     UFUNCTION()
         void OnGrabSuccess();
-
-    // 设置准心颜色（如果准心存在）
     void SetCrosshairColor(const FLinearColor& Color);
-
-    // 每帧执行抓取检测（在 Tick 中调用）
     void UpdateGrab();
 
-    // 移动输入
+    // ===== 移动 =====
     void MoveForward(float Value);
     void MoveRight(float Value);
 
-    // 时间回溯
+    // ===== 时间回溯 =====
     void StartTimeReverse();
     void StopTimeReverse();
     FTimeReverseDelegate TimeReverseDelegate;
 
-    // CD 系统
+    // ===== 视野扫描 =====
+    void StartVisionScan();
+    void StopVisionScan();
+    void RevealHiddenObjects(bool bReveal);
+
+    // ===== 视角控制 =====
+    void Turn(float Value);
+    void LookUp(float Value);
+
+    // ===== 推/拉 =====
+    void OnPushPressed();
+    void OnPushReleased();
+    void OnPullPressed();
+    void OnPullReleased();
+
+    // ===== 组件 =====
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+        class UTimeComponent* myTimeComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+        class UGrabComponent* GrabComponent;
+
+    // ===== 能力状态 =====
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability")
+        EAbilityState CurrentState;
+
+    // ===== 视野扫描参数 =====
+    UPROPERTY(EditAnywhere, Category = "VisionScan")
+        float VisionScanDuration;
+
+    UPROPERTY(EditAnywhere, Category = "VisionScan")
+        float VisionScanCooldown;
+
+    UPROPERTY(VisibleAnywhere, Category = "VisionScan")
+        float VisionScanCooldownRemaining;
+
+    UPROPERTY(VisibleAnywhere, Category = "VisionScan")
+        float VisionScanTimer;
+
+    // ===== 时间回溯 CD =====
     UPROPERTY(EditAnywhere, Category = "Cooldown")
         float TimeRewindCooldown;
 
@@ -59,27 +100,14 @@ public:
     UFUNCTION(BlueprintPure, Category = "Cooldown")
         float GetTimeRewindCooldownPercentage() const;
 
-    // 时间回溯组件
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TimeComponentInfo")
-        class UTimeComponent* myTimeComponent;
-
-    // 隔空抓取组件
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grab")
-        class UGrabComponent* GrabComponent;
-
-    // 准心 UI 的蓝图类
+    // ===== UI =====
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
         TSubclassOf<UUserWidget> CrosshairWidgetClass;
 
-    // 准心实例
     UPROPERTY()
         UUserWidget* CrosshairWidgetInstance;
 
-    // ========== 视角控制（鼠标） ==========
-    void Turn(float Value);
-    void LookUp(float Value);
-
-    // 伤害与血量系统
+    // ===== 血量 =====
     UFUNCTION(BlueprintCallable, Category = "Health")
         void ApplyDamage(float DamageAmount);
 
@@ -96,12 +124,6 @@ public:
         FOnHealthChanged OnHealthChanged;
 
     bool IsTimeReversing() const;
-
-    // ========== 推/拉回调 ==========
-    void OnPushPressed();
-    void OnPushReleased();
-    void OnPullPressed();
-    void OnPullReleased();
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")

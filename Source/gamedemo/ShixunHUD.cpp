@@ -14,10 +14,8 @@ float UShixunHUD::GetHealthPercent() const
 {
     AShixunCharacter* Char = GetPlayerCharacter();
     if (!Char) return 1.0f;
-
     float MaxHP = Char->GetMaxHealth();
     if (MaxHP <= 0.0f) return 1.0f;
-
     return Char->GetCurrentHealth() / MaxHP;
 }
 
@@ -48,7 +46,24 @@ bool UShixunHUD::IsTimeRewindReady() const
     return Char->GetTimeRewindCooldownPercentage() <= 0.0f;
 }
 
-// ===== 磁力抓取（始终可用） =====
+// ===== 视野扫描 CD =====
+float UShixunHUD::GetVisionScanCooldownPercent() const
+{
+    AShixunCharacter* Char = GetPlayerCharacter();
+    if (!Char) return 0.0f;
+    return FMath::GetMappedRangeValueClamped(
+        FVector2D(0.0f, 6.0f), FVector2D(0.0f, 1.0f),
+        Char->VisionScanCooldownRemaining);
+}
+
+bool UShixunHUD::IsVisionScanReady() const
+{
+    AShixunCharacter* Char = GetPlayerCharacter();
+    if (!Char) return false;
+    return Char->VisionScanCooldownRemaining <= 0.0f;
+}
+
+// ===== 磁力抓取 =====
 bool UShixunHUD::IsGrabReady() const
 {
     return true;
@@ -62,5 +77,10 @@ FLinearColor UShixunHUD::GetTimeRewindIconColor() const
 
 FLinearColor UShixunHUD::GetGrabIconColor() const
 {
-    return FLinearColor::White; // 0 CD，始终亮
+    return FLinearColor::White;
+}
+
+FLinearColor UShixunHUD::GetVisionScanIconColor() const
+{
+    return IsVisionScanReady() ? FLinearColor::White : FLinearColor(0.15f, 0.15f, 0.15f, 1.0f);
 }
