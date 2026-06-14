@@ -43,20 +43,20 @@ public:
     void MoveForward(float Value);
     void MoveRight(float Value);
 
-    // 时间回溯（物体）
+    // 时间回溯
     void StartTimeReverse();
     void StopTimeReverse();
     FTimeReverseDelegate TimeReverseDelegate;
 
-    // 时间回溯（人）
+    // 时间回溯组件
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TimeComponentInfo")
         class UTimeComponent* myTimeComponent;
 
-    // 隔空抓取
+    // 隔空抓取组件
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grab")
         class UGrabComponent* GrabComponent;
 
-    // 准心 UI 的蓝图类（在编辑器中指定）
+    // 准心 UI 的蓝图类
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
         TSubclassOf<UUserWidget> CrosshairWidgetClass;
 
@@ -91,16 +91,13 @@ public:
     UFUNCTION(BlueprintPure, Category = "TimeEnergy")
         bool IsTimeReversing() const;
 
-    // ========== 新增：推/拉回调 ==========
+    // ========== 推/拉回调 ==========
     void OnPushPressed();
     void OnPushReleased();
     void OnPullPressed();
     void OnPullReleased();
 
 protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-        class USpringArmComponent* CameraBoom;
-
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
         class UCameraComponent* FollowCamera;
 

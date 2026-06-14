@@ -1,5 +1,4 @@
 #include "ShixunCharacter.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/InputComponent.h"
@@ -13,21 +12,11 @@ AShixunCharacter::AShixunCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // 创建弹簧臂组件
-    CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-    CameraBoom->SetupAttachment(RootComponent);
-
-    CameraBoom->TargetArmLength = 300.0f;
-    CameraBoom->bDoCollisionTest = true;
-    CameraBoom->bUsePawnControlRotation = true;
-    CameraBoom->bInheritPitch = true;
-    CameraBoom->bInheritYaw = true;
-    CameraBoom->bInheritRoll = false;
-
-    // 创建相机
+    // 第一人称相机（在胶囊体中心，胶囊体碰撞防止穿墙）
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-    FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-    FollowCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 60.0f));
+    FollowCamera->SetupAttachment(RootComponent);
+    FollowCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 64.0f));
+    FollowCamera->bUsePawnControlRotation = true;
 
     if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
     {
@@ -39,7 +28,7 @@ AShixunCharacter::AShixunCharacter()
     }
 
     bUseControllerRotationYaw = true;
-    bUseControllerRotationPitch = false;
+    bUseControllerRotationPitch = true;
     bUseControllerRotationRoll = false;
 
     GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
@@ -89,7 +78,6 @@ void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("TimeReverse", IE_Released, this, &AShixunCharacter::StopTimeReverse);
     PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &AShixunCharacter::OnGrabPressed);
 
-    // ========== 新增：绑定推/拉动作（需要在项目输入设置中手动添加 Push / Pull） ==========
     PlayerInputComponent->BindAction("Push", IE_Pressed, this, &AShixunCharacter::OnPushPressed);
     PlayerInputComponent->BindAction("Push", IE_Released, this, &AShixunCharacter::OnPushReleased);
     PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AShixunCharacter::OnPullPressed);
@@ -204,7 +192,6 @@ void AShixunCharacter::OnGrabSuccess()
     SetCrosshairColor(FLinearColor::Green);
 }
 
-// ========== 能量UI转发函数实现 ==========
 float AShixunCharacter::GetTimeEnergyPercentage() const
 {
     if (!myTimeComponent) return 0.0f;
@@ -217,7 +204,6 @@ bool AShixunCharacter::IsTimeReversing() const
     return myTimeComponent->IsReversing();
 }
 
-// ========== 新增：推/拉回调实现 ==========
 void AShixunCharacter::OnPushPressed()
 {
     if (GrabComponent && GrabComponent->IsGrabbing())
