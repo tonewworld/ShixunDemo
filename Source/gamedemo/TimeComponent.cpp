@@ -43,7 +43,11 @@ void UTimeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorC
 
     if (isTimeReversing)   // 回溯模式
     {
-        if (isOutData) return;   // 没有更多数据可回溯
+        if (isOutData)
+        {
+            isTimeReversing = false;
+            return;   // 没有更多数据可回溯
+        }
 
         // 根据 ReverseSpeed 决定本帧回退多少帧，至少为 1
         int32 Steps = FMath::Max(1, ReverseSpeed);
@@ -53,6 +57,7 @@ void UTimeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorC
             auto TailNode = TimeFrames.GetTail();
             if (!TailNode)
             {
+                isTimeReversing = false;
                 isOutData = true;
                 RecordTimeLength = 0.0f;
                 break;
@@ -75,6 +80,7 @@ void UTimeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorC
 
             if (TimeFrames.Num() == 0)
             {
+                isTimeReversing = false;
                 isOutData = true;
                 RecordTimeLength = 0.0f;
                 break;
