@@ -6,6 +6,7 @@
 #include "ShixunCharacter.generated.h"
 
 class UGrabComponent;
+class UInventoryComponent;
 
 UENUM(BlueprintType)
 enum class EAbilityState : uint8
@@ -72,6 +73,12 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
         class UGrabComponent* GrabComponent;
+
+    // ===== 背包 =====
+    void OnToggleInventory();
+    void OnInteract();
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+        class UInventoryComponent* InventoryComponent;
 
     // ===== 能力状态 =====
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability")

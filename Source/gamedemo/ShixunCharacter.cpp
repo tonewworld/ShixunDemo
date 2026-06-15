@@ -4,6 +4,8 @@
 #include "Components/InputComponent.h"
 #include "GrabComponent.h"
 #include "TimeComponent.h"
+#include "InventoryComponent.h"
+#include "PickupComponent.h"
 #include "Components/Image.h"
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/UserWidget.h"
@@ -39,6 +41,7 @@ AShixunCharacter::AShixunCharacter()
 
     myTimeComponent = CreateDefaultSubobject<UTimeComponent>(TEXT("myTimeComponent"));
     GrabComponent = CreateDefaultSubobject<UGrabComponent>(TEXT("GrabComponent"));
+    InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 
     TimeRewindCooldown = 5.0f;
     TimeRewindCooldownRemaining = 0.0f;
@@ -144,6 +147,11 @@ void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("Push", IE_Released, this, &AShixunCharacter::OnPushReleased);
     PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AShixunCharacter::OnPullPressed);
     PlayerInputComponent->BindAction("Pull", IE_Released, this, &AShixunCharacter::OnPullReleased);
+
+    // 背包 Tab 键
+    PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &AShixunCharacter::OnToggleInventory);
+    // 交互 E 键
+    PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &AShixunCharacter::OnInteract);
 }
 
 void AShixunCharacter::MoveForward(float Value)
@@ -169,12 +177,14 @@ void AShixunCharacter::MoveRight(float Value)
 void AShixunCharacter::Turn(float Value)
 {
     if (myTimeComponent && myTimeComponent->isTimeReversing) return;
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     AddControllerYawInput(Value);
 }
 
 void AShixunCharacter::LookUp(float Value)
 {
     if (myTimeComponent && myTimeComponent->isTimeReversing) return;
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     AddControllerPitchInput(Value);
 }
 
@@ -261,6 +271,47 @@ void AShixunCharacter::SetCrosshairColor(const FLinearColor& Color)
 void AShixunCharacter::OnGrabSuccess()
 {
     SetCrosshairColor(FLinearColor::Green);
+}
+
+void AShixunCharacter::OnToggleInventory()
+{
+    if (InventoryComponent)
+    {
+        InventoryComponent->ToggleInventory();
+    }
+}
+
+void AShixunCharacter::OnInteract()
+{
+    if (!InventoryComponent) return;
+
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC) return;
+
+    FVector CamLoc;
+    FRotator CamRot;
+    PC->GetPlayerViewPoint(CamLoc, CamRot);
+
+    FVector TraceEnd = CamLoc + CamRot.Vector() * 400.0f;
+
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, TraceEnd, ECC_Visibility, Params))
+    {
+        AActor* HitActor = Hit.GetActor();
+        if (!HitActor) return;
+
+        UPickupComponent* PickupComp = HitActor->FindComponentByClass<UPickupComponent>();
+        if (PickupComp && PickupComp->ItemID != EItemID::None)
+        {
+            if (InventoryComponent->AddItem(PickupComp->ItemID) != INDEX_NONE)
+            {
+                HitActor->Destroy();
+            }
+        }
+    }
 }
 
 float AShixunCharacter::GetTimeRewindCooldownPercentage() const
