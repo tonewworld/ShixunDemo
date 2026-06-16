@@ -93,6 +93,8 @@ void UInventoryComponent::UseItemAtSlot(int32 SlotIndex)
 
 	if (Overlaps.Num() > 0)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("无法放置 %s：目标位置被阻挡"),
+			*GetItemDisplayName(ItemID).ToString());
 		OnPlaceItemFailed.Broadcast(ItemID);
 		return;
 	}

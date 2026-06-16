@@ -46,6 +46,7 @@ public:
     // ===== 移动 =====
     void MoveForward(float Value);
     void MoveRight(float Value);
+    void OnJump();
 
     // ===== 时间回溯 =====
     void StartTimeReverse();

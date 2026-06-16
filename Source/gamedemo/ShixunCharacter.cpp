@@ -136,7 +136,7 @@ void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAxis("Turn", this, &AShixunCharacter::Turn);
     PlayerInputComponent->BindAxis("LookUp", this, &AShixunCharacter::LookUp);
 
-    PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+    PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AShixunCharacter::OnJump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
     PlayerInputComponent->BindAction("TestDamage", IE_Pressed, this, &AShixunCharacter::TestDamage);
     PlayerInputComponent->BindAction("TimeReverse", IE_Pressed, this, &AShixunCharacter::StartTimeReverse);
@@ -174,6 +174,12 @@ void AShixunCharacter::MoveRight(float Value)
     }
 }
 
+void AShixunCharacter::OnJump()
+{
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    Jump();
+}
+
 void AShixunCharacter::Turn(float Value)
 {
     if (myTimeComponent && myTimeComponent->isTimeReversing) return;
@@ -201,12 +207,14 @@ void AShixunCharacter::ApplyDamage(float DamageAmount)
 
 void AShixunCharacter::TestDamage()
 {
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     ApplyDamage(10.0f);
     UE_LOG(LogTemp, Log, TEXT("TestDamage called. Current Health: %f / %f"), Health, MaxHealth);
 }
 
 void AShixunCharacter::StartTimeReverse()
 {
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     // 状态机：其他能力使用中则不可回溯
     if (CurrentState != EAbilityState::Default) return;
     if (TimeRewindCooldownRemaining > 0) return;
@@ -218,6 +226,7 @@ void AShixunCharacter::StartTimeReverse()
 
 void AShixunCharacter::StopTimeReverse()
 {
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     if (CurrentState != EAbilityState::TimeRewind) return;
     myTimeComponent->isTimeReversing = false;
     TimeReverseDelegate.Broadcast(false);
@@ -226,6 +235,7 @@ void AShixunCharacter::StopTimeReverse()
 
 void AShixunCharacter::OnGrabPressed()
 {
+	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
 	if (!GrabComponent) return;
 
 	// 按一下F切换：如果已抓住物体则释放，否则进入抓取模式
@@ -283,7 +293,8 @@ void AShixunCharacter::OnToggleInventory()
 
 void AShixunCharacter::OnInteract()
 {
-    if (!InventoryComponent) return;
+	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+	if (!InventoryComponent) return;
 
     APlayerController* PC = Cast<APlayerController>(GetController());
     if (!PC) return;
@@ -328,7 +339,8 @@ bool AShixunCharacter::IsTimeReversing() const
 
 void AShixunCharacter::OnPushPressed()
 {
-    if (GrabComponent && GrabComponent->IsGrabbing())
+	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+	if (GrabComponent && GrabComponent->IsGrabbing())
     {
         GrabComponent->StartPush();
     }
@@ -336,7 +348,8 @@ void AShixunCharacter::OnPushPressed()
 
 void AShixunCharacter::OnPushReleased()
 {
-    if (GrabComponent)
+	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+	if (GrabComponent)
     {
         GrabComponent->StopPush();
     }
@@ -344,7 +357,8 @@ void AShixunCharacter::OnPushReleased()
 
 void AShixunCharacter::OnPullPressed()
 {
-    if (GrabComponent && GrabComponent->IsGrabbing())
+	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+	if (GrabComponent && GrabComponent->IsGrabbing())
     {
         GrabComponent->StartPull();
     }
@@ -356,7 +370,8 @@ void AShixunCharacter::OnPullPressed()
 
 void AShixunCharacter::OnPullReleased()
 {
-    if (GrabComponent && GrabComponent->IsGrabbing())
+	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+	if (GrabComponent && GrabComponent->IsGrabbing())
     {
         GrabComponent->StopPull();
     }

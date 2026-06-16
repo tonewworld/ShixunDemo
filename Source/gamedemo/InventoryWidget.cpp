@@ -73,6 +73,7 @@ FReply UInventoryWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, co
 				if (CurrentSlots.IsValidIndex(i) && !CurrentSlots[i].IsEmpty() && InventoryComp)
 				{
 					InventoryComp->UseItemAtSlot(i);
+					UpdateSlots(InventoryComp->Slots);
 					return FReply::Handled();
 				}
 			}
