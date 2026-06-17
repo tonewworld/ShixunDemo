@@ -64,3 +64,38 @@ Developed with Unreal Engine 4
 - 最近抓取距离 `MinGrabDistance` 默认 50，最远 `MaxGrabDistance` 默认 800
 - 释放时自动停止推/拉状态，避免残留影响
 - 可抓取物体需要在蓝图类设置中实现 `MagneticInteractable` 接口（类设置 → 接口 → 添加）
+
+---
+
+## 本周新增（2024.6.17）
+
+### 关卡切换与结束游戏
+- **关卡切换**：使用 `BP_LevelTransitionPad` 蓝图，放在 map1 终点 → 跳转 map2
+- **结束游戏**：复制创建 `BP_GameEnd`，放在 map2 终点 → 仅输出 "Game Over!" 日志
+- 蓝图自带防抖（Transitioning 变量），防止重复触发
+
+### 血量系统恢复
+- 恢复 `ShixunCharacter` 血量属性（Health/MaxHealth，默认 100）
+- `ApplyDamage(float)` 扣血 → 归零后 2 秒延迟重生
+- `Heal(float)` 治疗
+- `OnHealthChanged` 委托，UI 实时响应
+- 重生期间 `bIsRespawning` 无敌保护
+
+### 伤害区域组件（DamageVolume）
+- 新建 `UDamageVolume`（ActorComponent），挂载到任意 StaticMesh 模型上
+- 碰撞盒跟随模型本身，无需单独调整
+- 两种模式（`bOneTimeDamage` 开关）：
+  - **单次伤害**（默认）：碰一下扣一次血，适合尖刺/陷阱
+  - **持续伤害**：站在上面持续扣血，适合岩浆/毒潭
+- `DamageAmount` 配置伤害值，`HitsPerSecond` 配置持续频率
+
+### 血瓶系统（HealthPotion）
+- `ItemID` 新增 `HealthPotion` 枚举
+- 场景中放模型 → 挂载 `PickupComponent` → 设 `ItemID=HealthPotion`
+- 按 **E** 拾取 → **Tab** 打开背包 → **使用** → 恢复 30 血量
+
+### 新建文件
+| 文件 | 说明 |
+|------|------|
+| `Source/gamedemo/DamageVolume.h/.cpp` | 伤害区域组件（挂载式） |
+| `Content/map_1blueprint/BP_GameEnd.uasset` | 结束游戏蓝图 |

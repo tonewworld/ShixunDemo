@@ -1,5 +1,6 @@
 #include "InventoryComponent.h"
 #include "InventoryWidget.h"
+#include "ShixunCharacter.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
@@ -55,13 +56,23 @@ void UInventoryComponent::UseItemAtSlot(int32 SlotIndex)
 {
 	if (!Slots.IsValidIndex(SlotIndex) || Slots[SlotIndex].IsEmpty()) return;
 
-	ACharacter* Char = Cast<ACharacter>(GetOwner());
+	AShixunCharacter* Char = Cast<AShixunCharacter>(GetOwner());
 	if (!Char) return;
 
+	EItemID ItemID = Slots[SlotIndex].ItemID;
+
+	// ===== 血瓶：直接使用，治疗角色 =====
+	if (ItemID == EItemID::HealthPotion)
+	{
+		Char->Heal(30.0f);
+		RemoveItem(SlotIndex);
+		UE_LOG(LogTemp, Log, TEXT("使用血瓶，恢复 30 点生命值"));
+		return;
+	}
+
+	// ===== 其他物品：放置到场景中 =====
 	APlayerController* PC = Cast<APlayerController>(Char->GetController());
 	if (!PC) return;
-
-	EItemID ItemID = Slots[SlotIndex].ItemID;
 
 	FVector CamLoc;
 	FRotator CamRot;
@@ -174,6 +185,8 @@ TSubclassOf<AActor> UInventoryComponent::GetActorClassForItem(EItemID ItemID)
 		return TSoftClassPtr<AActor>(FSoftObjectPath(TEXT("/Game/Assets/Blueprints/BP_Key.BP_Key_C"))).LoadSynchronous();
 	case EItemID::Ball:
 		return TSoftClassPtr<AActor>(FSoftObjectPath(TEXT("/Game/Assets/Blueprints/BP_Ball.BP_Ball_C"))).LoadSynchronous();
+	case EItemID::HealthPotion:
+		return nullptr; // 血瓶不放置到场景，直接使用
 	default:
 		return nullptr;
 	}
@@ -185,6 +198,7 @@ FText UInventoryComponent::GetItemDisplayName(EItemID ItemID)
 	{
 	case EItemID::Key:	return NSLOCTEXT("Item", "Key", "钥匙");
 	case EItemID::Ball:	return NSLOCTEXT("Item", "Ball", "球");
+	case EItemID::HealthPotion:	return NSLOCTEXT("Item", "HealthPotion", "血瓶");
 	default:			return FText::GetEmpty();
 	}
 }

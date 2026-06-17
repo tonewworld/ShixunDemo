@@ -14,21 +14,23 @@ float UShixunHUD::GetHealthPercent() const
 {
     AShixunCharacter* Char = GetPlayerCharacter();
     if (!Char) return 1.0f;
-    float MaxHP = Char->GetMaxHealth();
-    if (MaxHP <= 0.0f) return 1.0f;
-    return Char->GetCurrentHealth() / MaxHP;
+    float MaxHealth = Char->GetMaxHealth();
+    if (MaxHealth <= 0.0f) return 1.0f;
+    return Char->GetCurrentHealth() / MaxHealth;
 }
 
 float UShixunHUD::GetMaxHealth() const
 {
     AShixunCharacter* Char = GetPlayerCharacter();
-    return Char ? Char->GetMaxHealth() : 100.0f;
+    if (!Char) return 100.0f;
+    return Char->GetMaxHealth();
 }
 
 float UShixunHUD::GetCurrentHealth() const
 {
     AShixunCharacter* Char = GetPlayerCharacter();
-    return Char ? Char->GetCurrentHealth() : 0.0f;
+    if (!Char) return 100.0f;
+    return Char->GetCurrentHealth();
 }
 
 // ===== 时间回溯 CD =====

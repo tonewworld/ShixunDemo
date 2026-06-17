@@ -58,6 +58,10 @@ void AShixunCharacter::BeginPlay()
     Super::BeginPlay();
     OnHealthChanged.Broadcast(Health, MaxHealth);
 
+    // 记录初始位置作为默认重生点
+    LastSpawnLocation = GetActorLocation();
+    LastSpawnRotation = GetActorRotation();
+
     if (CrosshairWidgetClass)
     {
         CrosshairWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), CrosshairWidgetClass);
@@ -138,7 +142,6 @@ void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AShixunCharacter::OnJump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-    PlayerInputComponent->BindAction("TestDamage", IE_Pressed, this, &AShixunCharacter::TestDamage);
     PlayerInputComponent->BindAction("TimeReverse", IE_Pressed, this, &AShixunCharacter::StartTimeReverse);
     PlayerInputComponent->BindAction("TimeReverse", IE_Released, this, &AShixunCharacter::StopTimeReverse);
     PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &AShixunCharacter::OnGrabPressed);
@@ -194,22 +197,72 @@ void AShixunCharacter::LookUp(float Value)
     AddControllerPitchInput(Value);
 }
 
+// ===== 血量系统 =====
 void AShixunCharacter::ApplyDamage(float DamageAmount)
 {
     if (DamageAmount <= 0.0f) return;
+    // 重生无敌保护
+    if (bIsRespawning) return;
+
     Health = FMath::Clamp(Health - DamageAmount, 0.0f, MaxHealth);
     OnHealthChanged.Broadcast(Health, MaxHealth);
+
+    UE_LOG(LogTemp, Log, TEXT("受到伤害: %.1f, 当前血量: %.1f/%.1f"), DamageAmount, Health, MaxHealth);
+
+    // 血量归零 → 死亡重生
     if (Health <= 0.0f)
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s has died!"), *GetName());
+        RespawnAtLastSpawnPoint();
     }
 }
 
-void AShixunCharacter::TestDamage()
+void AShixunCharacter::Heal(float HealAmount)
 {
-    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-    ApplyDamage(10.0f);
-    UE_LOG(LogTemp, Log, TEXT("TestDamage called. Current Health: %f / %f"), Health, MaxHealth);
+    if (HealAmount <= 0.0f) return;
+
+    Health = FMath::Clamp(Health + HealAmount, 0.0f, MaxHealth);
+    OnHealthChanged.Broadcast(Health, MaxHealth);
+
+    UE_LOG(LogTemp, Log, TEXT("治疗: +%.1f, 当前血量: %.1f/%.1f"), HealAmount, Health, MaxHealth);
+}
+
+void AShixunCharacter::RespawnAtLastSpawnPoint()
+{
+    UE_LOG(LogTemp, Log, TEXT("玩家死亡，2秒后在重生点复活！"));
+
+    // 临时禁用移动输入
+    if (Controller)
+    {
+        Controller->SetIgnoreMoveInput(true);
+    }
+
+    // 标记为重生无敌状态
+    bIsRespawning = true;
+
+    // 延迟 2 秒后执行真正的复活
+    FTimerHandle RespawnTimerHandle;
+    GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &AShixunCharacter::FinishRespawn, 2.0f, false);
+}
+
+void AShixunCharacter::FinishRespawn()
+{
+    // 重置血量
+    Health = MaxHealth;
+    OnHealthChanged.Broadcast(Health, MaxHealth);
+
+    // 传送回上次记录的重生位置
+    SetActorLocation(LastSpawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
+    SetActorRotation(LastSpawnRotation);
+    if (Controller)
+    {
+        Controller->SetControlRotation(LastSpawnRotation);
+        Controller->SetIgnoreMoveInput(false);
+    }
+
+    // 退出无敌状态
+    bIsRespawning = false;
+
+    UE_LOG(LogTemp, Log, TEXT("重生完成！"));
 }
 
 void AShixunCharacter::StartTimeReverse()

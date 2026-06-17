@@ -120,7 +120,7 @@ public:
         void ApplyDamage(float DamageAmount);
 
     UFUNCTION(BlueprintCallable, Category = "Health")
-        void TestDamage();
+        void Heal(float HealAmount);
 
     UFUNCTION(BlueprintPure, Category = "Health")
         float GetCurrentHealth() const { return Health; }
@@ -131,15 +131,34 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Health")
         FOnHealthChanged OnHealthChanged;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health", meta = (AllowPrivateAccess = "true"))
+        float MaxHealth;
+
+    /** 记录上次安全的重生位置 */
+    UPROPERTY(VisibleAnywhere, Category = "Health")
+        FVector LastSpawnLocation;
+
+    UPROPERTY(VisibleAnywhere, Category = "Health")
+        FRotator LastSpawnRotation;
+
+    /** 死亡时重置血量并传送到重生点 */
+    void RespawnAtLastSpawnPoint();
+
+    /** 重生完成后重置标记 */
+    void FinishRespawn();
+
+    /** 是否正在重生中（无敌状态） */
+    bool IsRespawning() const { return bIsRespawning; }
+
     bool IsTimeReversing() const;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
         class UCameraComponent* FollowCamera;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
         float Health;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
-        float MaxHealth;
+    /** 是否正在重生中（无敌状态） */
+    bool bIsRespawning = false;
 };
