@@ -103,11 +103,11 @@ public:
     void Turn(float Value);
     void LookUp(float Value);
 
-    // ===== 推/拉 =====
-    void OnPushPressed();
-    void OnPushReleased();
-    void OnPullPressed();
-    void OnPullReleased();
+    // ===== 旋转抓取物 =====
+    void OnRotateLeftPressed();
+    void OnRotateLeftReleased();
+    void OnRotateRightPressed();
+    void OnRotateRightReleased();
 
     // ===== 组件 =====
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")

@@ -18,33 +18,42 @@ void UGrabComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorC
     if (!GrabbedComponent || !GrabbedActor) return;
 
     UCameraComponent* Camera = GetPlayerCamera();
-    if (Camera)
+    if (!Camera) return;
+
+    // 计算目标位置（相机前方固定距离）
+    FVector TargetLocation = Camera->GetComponentLocation() + Camera->GetForwardVector() * GrabDistance;
+
+    if (bUsePhysics)
     {
-        // 根据推/拉调整抓取距离
-        if (bIsPushing)
-        {
-            GrabDistance += PushPullSpeed * DeltaTime;
-        }
-        else if (bIsPulling)
-        {
-            GrabDistance -= PushPullSpeed * DeltaTime;
-        }
-        GrabDistance = FMath::Clamp(GrabDistance, MinGrabDistance, MaxGrabDistance);
+        FVector CurrentLoc = GrabbedComponent->GetComponentLocation();
+        FVector Delta = TargetLocation - CurrentLoc;
+        FVector Velocity = Delta / DeltaTime;
+        Velocity = Velocity.GetClampedToMaxSize(800.0f);
+        GrabbedComponent->SetPhysicsLinearVelocity(Velocity, false);
+    }
+    else
+    {
+        GrabbedComponent->SetWorldLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
+    }
 
-        // 计算目标位置（相机前方 GrabDistance 距离）
-        FVector TargetLocation = Camera->GetComponentLocation() + Camera->GetForwardVector() * GrabDistance;
+    // 水平旋转
+    float YawVelocity = 0.0f;
+    if (bIsRotatingLeft)
+        YawVelocity = RotationSpeed;
+    else if (bIsRotatingRight)
+        YawVelocity = -RotationSpeed;
 
+    if (YawVelocity != 0.0f)
+    {
         if (bUsePhysics)
         {
-            FVector CurrentLoc = GrabbedComponent->GetComponentLocation();
-            FVector Delta = TargetLocation - CurrentLoc;
-            FVector Velocity = Delta / DeltaTime;
-            Velocity = Velocity.GetClampedToMaxSize(800.0f);
-            GrabbedComponent->SetPhysicsLinearVelocity(Velocity, false);
+            GrabbedComponent->SetPhysicsAngularVelocityInDegrees(FVector(0.0f, 0.0f, YawVelocity), false, NAME_None);
         }
         else
         {
-            GrabbedComponent->SetWorldLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
+            FRotator CurrentRot = GrabbedActor->GetActorRotation();
+            CurrentRot.Yaw += YawVelocity * DeltaTime;
+            GrabbedActor->SetActorRotation(CurrentRot);
         }
     }
 }
@@ -66,32 +75,32 @@ void UGrabComponent::StartGrab()
     FHitResult Hit;
     bool bHit = PC->GetHitResultAtScreenPosition(CrosshairPosition, ECC_Visibility, true, Hit);
 
-	if (bHit && Hit.Distance <= GrabRange)
-	{
-		UPrimitiveComponent* PrimComp = Hit.GetComponent();
-		AActor* HitActor = Hit.GetActor();
+    if (bHit && Hit.Distance <= GrabRange)
+    {
+        UPrimitiveComponent* PrimComp = Hit.GetComponent();
+        AActor* HitActor = Hit.GetActor();
 
-		// 检查是否实现了 IMagneticInteractable 接口
-		if (!HitActor || !HitActor->GetClass()->ImplementsInterface(UMagneticInteractable::StaticClass()))
-		{
-			return;
-		}
+        // 检查是否实现了 IMagneticInteractable 接口
+        if (!HitActor || !HitActor->GetClass()->ImplementsInterface(UMagneticInteractable::StaticClass()))
+        {
+            return;
+        }
 
-		// 检查质量限制 < 500kg
-		if (PrimComp && PrimComp->IsSimulatingPhysics())
-		{
-			float Mass = PrimComp->GetMass();
-			if (Mass >= 500.0f)
-			{
-				return;
-			}
+        // 检查质量限制 < 500kg
+        if (PrimComp && PrimComp->IsSimulatingPhysics())
+        {
+            float Mass = PrimComp->GetMass();
+            if (Mass >= 500.0f)
+            {
+                return;
+            }
 
-			// 通知接口
-			IMagneticInteractable::Execute_OnGrabbed(HitActor, GetOwner());
+            // 通知接口
+            IMagneticInteractable::Execute_OnGrabbed(HitActor, GetOwner());
 
-			GrabbedComponent = PrimComp;
-			GrabbedActor = HitActor;
-			OnGrabSuccess.Broadcast();
+            GrabbedComponent = PrimComp;
+            GrabbedActor = HitActor;
+            OnGrabSuccess.Broadcast();
 
             UCameraComponent* Camera = GetPlayerCamera();
             if (Camera)
@@ -99,8 +108,6 @@ void UGrabComponent::StartGrab()
                 FVector CameraLoc = Camera->GetComponentLocation();
                 FVector ObjectLoc = GrabbedComponent->GetComponentLocation();
                 GrabDistance = FVector::Dist(ObjectLoc, CameraLoc);
-                // 限制初始距离在合法范围内
-                GrabDistance = FMath::Clamp(GrabDistance, MinGrabDistance, MaxGrabDistance);
             }
 
             GrabbedComponent->SetEnableGravity(false);
@@ -112,24 +119,22 @@ void UGrabComponent::StartGrab()
 
 void UGrabComponent::ReleaseGrab()
 {
-	if (GrabbedActor)
-	{
-		// 通知接口释放
-		IMagneticInteractable::Execute_OnMagneticRelease(GrabbedActor);
-	}
+    if (GrabbedActor)
+    {
+        IMagneticInteractable::Execute_OnMagneticRelease(GrabbedActor);
+    }
 
-	if (GrabbedComponent)
-	{
-		GrabbedComponent->SetEnableGravity(true);
-		GrabbedComponent->SetLinearDamping(0.0f);
-		GrabbedComponent->SetAngularDamping(0.0f);
-	}
-	GrabbedActor = nullptr;
-	GrabbedComponent = nullptr;
+    if (GrabbedComponent)
+    {
+        GrabbedComponent->SetEnableGravity(true);
+        GrabbedComponent->SetLinearDamping(0.0f);
+        GrabbedComponent->SetAngularDamping(0.0f);
+    }
+    GrabbedActor = nullptr;
+    GrabbedComponent = nullptr;
 
-	// ========== 新增：释放时同时停止推/拉状态 ==========
-	bIsPushing = false;
-	bIsPulling = false;
+    bIsRotatingLeft = false;
+    bIsRotatingRight = false;
 }
 
 UCameraComponent* UGrabComponent::GetPlayerCamera() const
@@ -142,25 +147,24 @@ UCameraComponent* UGrabComponent::GetPlayerCamera() const
     return nullptr;
 }
 
-// ========== 新增：推/拉实现 ==========
-void UGrabComponent::StartPush()
+void UGrabComponent::StartRotateLeft()
 {
-    bIsPushing = true;
-    bIsPulling = false;   // 互斥
+    bIsRotatingLeft = true;
+    bIsRotatingRight = false;
 }
 
-void UGrabComponent::StopPush()
+void UGrabComponent::StopRotateLeft()
 {
-    bIsPushing = false;
+    bIsRotatingLeft = false;
 }
 
-void UGrabComponent::StartPull()
+void UGrabComponent::StartRotateRight()
 {
-    bIsPulling = true;
-    bIsPushing = false;   // 互斥
+    bIsRotatingRight = true;
+    bIsRotatingLeft = false;
 }
 
-void UGrabComponent::StopPull()
+void UGrabComponent::StopRotateRight()
 {
-    bIsPulling = false;
+    bIsRotatingRight = false;
 }

@@ -166,10 +166,10 @@ void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &AShixunCharacter::OnGrabPressed);
     PlayerInputComponent->BindAction("Grab", IE_Released, this, &AShixunCharacter::OnGrabReleased);
 
-    PlayerInputComponent->BindAction("Push", IE_Pressed, this, &AShixunCharacter::OnPushPressed);
-    PlayerInputComponent->BindAction("Push", IE_Released, this, &AShixunCharacter::OnPushReleased);
-    PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AShixunCharacter::OnPullPressed);
-    PlayerInputComponent->BindAction("Pull", IE_Released, this, &AShixunCharacter::OnPullReleased);
+    PlayerInputComponent->BindAction("Push", IE_Pressed, this, &AShixunCharacter::OnRotateLeftPressed);
+    PlayerInputComponent->BindAction("Push", IE_Released, this, &AShixunCharacter::OnRotateLeftReleased);
+    PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AShixunCharacter::OnRotateRightPressed);
+    PlayerInputComponent->BindAction("Pull", IE_Released, this, &AShixunCharacter::OnRotateRightReleased);
 
     // 冲刺 Shift 键
     PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &AShixunCharacter::OnSprintPressed);
@@ -344,6 +344,7 @@ void AShixunCharacter::StartTimeReverse()
     if (CurrentState != EAbilityState::Default) return;
     if (TimeRewindCooldownRemaining > 0) return;
 
+    UE_LOG(LogTemp, Warning, TEXT("!!! TimeReverse STARTED — check if F key was pressed or Blueprint called"));
     CurrentState = EAbilityState::TimeRewind;
     myTimeComponent->isTimeReversing = true;
     TimeReverseDelegate.Broadcast(true);
@@ -461,30 +462,30 @@ bool AShixunCharacter::IsTimeReversing() const
     return myTimeComponent->IsReversing();
 }
 
-void AShixunCharacter::OnPushPressed()
+void AShixunCharacter::OnRotateLeftPressed()
 {
     if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     if (GrabComponent && GrabComponent->IsGrabbing())
     {
-        GrabComponent->StartPush();
+        GrabComponent->StartRotateLeft();
     }
 }
 
-void AShixunCharacter::OnPushReleased()
+void AShixunCharacter::OnRotateLeftReleased()
 {
     if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     if (GrabComponent)
     {
-        GrabComponent->StopPush();
+        GrabComponent->StopRotateLeft();
     }
 }
 
-void AShixunCharacter::OnPullPressed()
+void AShixunCharacter::OnRotateRightPressed()
 {
     if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     if (GrabComponent && GrabComponent->IsGrabbing())
     {
-        GrabComponent->StartPull();
+        GrabComponent->StartRotateRight();
     }
     else if (CurrentState == EAbilityState::Default && VisionScanCooldownRemaining <= 0.0f)
     {
@@ -492,12 +493,12 @@ void AShixunCharacter::OnPullPressed()
     }
 }
 
-void AShixunCharacter::OnPullReleased()
+void AShixunCharacter::OnRotateRightReleased()
 {
     if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-    if (GrabComponent && GrabComponent->IsGrabbing())
+    if (GrabComponent)
     {
-        GrabComponent->StopPull();
+        GrabComponent->StopRotateRight();
     }
 }
 

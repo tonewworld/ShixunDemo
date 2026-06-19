@@ -22,17 +22,19 @@ public:
     void ReleaseGrab();
     bool IsGrabbing() const { return GrabbedActor != nullptr; }
 
-    // ========== ��������/������ ==========
-    void StartPush();
-    void StopPush();
-    void StartPull();
-    void StopPull();
+    void StartRotateLeft();
+    void StopRotateLeft();
+    void StartRotateRight();
+    void StopRotateRight();
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grab")
         float GrabRange = 1000.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grab")
         bool bUsePhysics = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grab")
+        float RotationSpeed = 90.0f;
 
     UPROPERTY(BlueprintAssignable, Category = "Grab")
         FOnGrabSuccess OnGrabSuccess;
@@ -46,18 +48,8 @@ private:
 
     float GrabDistance = 0.0f;
 
-    // ========== ��������/��״̬����� ==========
-    bool bIsPushing = false;
-    bool bIsPulling = false;
-
-    UPROPERTY(EditAnywhere, Category = "PushPull")
-        float PushPullSpeed = 200.0f;   // ����仯�ٶȣ���λ/�룩
-
-    UPROPERTY(EditAnywhere, Category = "PushPull")
-        float MinGrabDistance = 50.0f;
-
-    UPROPERTY(EditAnywhere, Category = "PushPull")
-        float MaxGrabDistance = 800.0f;
+    bool bIsRotatingLeft = false;
+    bool bIsRotatingRight = false;
 
     class UCameraComponent* GetPlayerCamera() const;
 };
