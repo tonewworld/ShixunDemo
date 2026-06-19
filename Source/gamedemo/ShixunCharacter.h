@@ -38,6 +38,7 @@ public:
 
     // ===== 抓取 =====
     void OnGrabPressed();
+    void OnGrabReleased();
     UFUNCTION()
         void OnGrabSuccess();
     void SetCrosshairColor(const FLinearColor& Color);
@@ -47,6 +48,46 @@ public:
     void MoveForward(float Value);
     void MoveRight(float Value);
     void OnJump();
+    void OnSprintPressed();
+    void OnSprintReleased();
+    void OnCrouchPressed();
+    void OnCrouchReleased();
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float WalkSpeed = 600.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float SprintSpeed = 900.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float CrouchSpeed = 300.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float JumpZVelocity = 600.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float AirControl = 0.2f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float GravityScale = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float RotationRateYaw = 540.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float MaxAcceleration = 2048.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float BrakingDeceleration = 2048.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float GroundFriction = 8.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float CrouchCameraZ = 32.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+        float CrouchInterpSpeed = 8.0f;
 
     // ===== 时间回溯 =====
     void StartTimeReverse();
@@ -161,4 +202,19 @@ protected:
 
     /** 是否正在重生中（无敌状态） */
     bool bIsRespawning = false;
+
+    /** 是否正在冲刺 */
+    bool bIsSprinting = false;
+
+    /** 是否正在蹲下 */
+    bool bIsCrouching = false;
+
+    /** 站立时相机高度（运行时从 FollowCamera 初始 Z 获取） */
+    float StandCameraZ = 64.0f;
+
+    /** 每帧插值相机高度 */
+    void UpdateCrouch(float DeltaTime);
+
+    /** 应用 3C 参数到 CharacterMovementComponent */
+    void ApplyMovementParams();
 };

@@ -18,16 +18,13 @@ AShixunCharacter::AShixunCharacter()
     // 第一人称相机（在胶囊体中心，胶囊体碰撞防止穿墙）
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(RootComponent);
-    FollowCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 64.0f));
+    FollowCamera->SetRelativeLocation(FVector(0.0f, 0.0f, StandCameraZ));
     FollowCamera->bUsePawnControlRotation = true;
 
     if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
     {
         MoveComp->bOrientRotationToMovement = false;
         MoveComp->bUseControllerDesiredRotation = true;
-        MoveComp->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
-        MoveComp->JumpZVelocity = 600.0f;
-        MoveComp->AirControl = 0.2f;
     }
 
     bUseControllerRotationYaw = true;
@@ -56,6 +53,12 @@ AShixunCharacter::AShixunCharacter()
 void AShixunCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+    ApplyMovementParams();
+
+    // 记录编辑器设置的初始相机高度
+    StandCameraZ = FollowCamera->GetRelativeLocation().Z;
+
     OnHealthChanged.Broadcast(Health, MaxHealth);
 
     // 记录初始位置作为默认重生点
@@ -73,10 +76,26 @@ void AShixunCharacter::BeginPlay()
     }
 }
 
+void AShixunCharacter::ApplyMovementParams()
+{
+    UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+    if (!MoveComp) return;
+
+    MoveComp->MaxWalkSpeed = WalkSpeed;
+    MoveComp->JumpZVelocity = JumpZVelocity;
+    MoveComp->AirControl = AirControl;
+    MoveComp->GravityScale = GravityScale;
+    MoveComp->RotationRate = FRotator(0.0f, RotationRateYaw, 0.0f);
+    MoveComp->MaxAcceleration = MaxAcceleration;
+    MoveComp->BrakingDecelerationWalking = BrakingDeceleration;
+    MoveComp->GroundFriction = GroundFriction;
+}
+
 void AShixunCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     UpdateGrab();
+    UpdateCrouch(DeltaTime);
 
     // ===== 状态机 =====
     switch (CurrentState)
@@ -145,11 +164,20 @@ void AShixunCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("TimeReverse", IE_Pressed, this, &AShixunCharacter::StartTimeReverse);
     PlayerInputComponent->BindAction("TimeReverse", IE_Released, this, &AShixunCharacter::StopTimeReverse);
     PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &AShixunCharacter::OnGrabPressed);
+    PlayerInputComponent->BindAction("Grab", IE_Released, this, &AShixunCharacter::OnGrabReleased);
 
     PlayerInputComponent->BindAction("Push", IE_Pressed, this, &AShixunCharacter::OnPushPressed);
     PlayerInputComponent->BindAction("Push", IE_Released, this, &AShixunCharacter::OnPushReleased);
     PlayerInputComponent->BindAction("Pull", IE_Pressed, this, &AShixunCharacter::OnPullPressed);
     PlayerInputComponent->BindAction("Pull", IE_Released, this, &AShixunCharacter::OnPullReleased);
+
+    // 冲刺 Shift 键
+    PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &AShixunCharacter::OnSprintPressed);
+    PlayerInputComponent->BindAction("Sprint", IE_Released, this, &AShixunCharacter::OnSprintReleased);
+
+    // 蹲下 Ctrl 键
+    PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AShixunCharacter::OnCrouchPressed);
+    PlayerInputComponent->BindAction("Crouch", IE_Released, this, &AShixunCharacter::OnCrouchReleased);
 
     // 背包 Tab 键
     PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &AShixunCharacter::OnToggleInventory);
@@ -181,6 +209,50 @@ void AShixunCharacter::OnJump()
 {
     if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
     Jump();
+}
+
+void AShixunCharacter::OnSprintPressed()
+{
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    bIsSprinting = true;
+    if (!bIsCrouching)
+    {
+        if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+            MoveComp->MaxWalkSpeed = SprintSpeed;
+    }
+}
+
+void AShixunCharacter::OnSprintReleased()
+{
+    bIsSprinting = false;
+    if (!bIsCrouching)
+    {
+        if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+            MoveComp->MaxWalkSpeed = WalkSpeed;
+    }
+}
+
+void AShixunCharacter::OnCrouchPressed()
+{
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    bIsCrouching = true;
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+        MoveComp->MaxWalkSpeed = CrouchSpeed;
+}
+
+void AShixunCharacter::OnCrouchReleased()
+{
+    bIsCrouching = false;
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+        MoveComp->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
+}
+
+void AShixunCharacter::UpdateCrouch(float DeltaTime)
+{
+    float TargetZ = bIsCrouching ? CrouchCameraZ : StandCameraZ;
+    FVector CamLoc = FollowCamera->GetRelativeLocation();
+    CamLoc.Z = FMath::FInterpTo(CamLoc.Z, TargetZ, DeltaTime, CrouchInterpSpeed);
+    FollowCamera->SetRelativeLocation(CamLoc);
 }
 
 void AShixunCharacter::Turn(float Value)
@@ -288,28 +360,27 @@ void AShixunCharacter::StopTimeReverse()
 
 void AShixunCharacter::OnGrabPressed()
 {
-	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-	if (!GrabComponent) return;
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    if (!GrabComponent) return;
 
-	// 按一下F切换：如果已抓住物体则释放，否则进入抓取模式
-	if (GrabComponent->IsGrabbing())
-	{
-		GrabComponent->ReleaseGrab();
-		bIsGrabKeyHeld = false;
-		if (CrosshairWidgetInstance && CrosshairWidgetInstance->IsInViewport())
-		{
-			CrosshairWidgetInstance->RemoveFromViewport();
-		}
-		SetCrosshairColor(FLinearColor::White);
-	}
-	else
-	{
-		bIsGrabKeyHeld = true;
-		if (CrosshairWidgetInstance && !CrosshairWidgetInstance->IsInViewport())
-		{
-			CrosshairWidgetInstance->AddToViewport();
-		}
-	}
+    bIsGrabKeyHeld = true;
+    if (CrosshairWidgetInstance && !CrosshairWidgetInstance->IsInViewport())
+    {
+        CrosshairWidgetInstance->AddToViewport();
+    }
+}
+
+void AShixunCharacter::OnGrabReleased()
+{
+    bIsGrabKeyHeld = false;
+    if (!GrabComponent) return;
+
+    GrabComponent->ReleaseGrab();
+    if (CrosshairWidgetInstance && CrosshairWidgetInstance->IsInViewport())
+    {
+        CrosshairWidgetInstance->RemoveFromViewport();
+    }
+    SetCrosshairColor(FLinearColor::White);
 }
 
 void AShixunCharacter::UpdateGrab()
@@ -346,8 +417,8 @@ void AShixunCharacter::OnToggleInventory()
 
 void AShixunCharacter::OnInteract()
 {
-	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-	if (!InventoryComponent) return;
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    if (!InventoryComponent) return;
 
     APlayerController* PC = Cast<APlayerController>(GetController());
     if (!PC) return;
@@ -392,8 +463,8 @@ bool AShixunCharacter::IsTimeReversing() const
 
 void AShixunCharacter::OnPushPressed()
 {
-	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-	if (GrabComponent && GrabComponent->IsGrabbing())
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    if (GrabComponent && GrabComponent->IsGrabbing())
     {
         GrabComponent->StartPush();
     }
@@ -401,8 +472,8 @@ void AShixunCharacter::OnPushPressed()
 
 void AShixunCharacter::OnPushReleased()
 {
-	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-	if (GrabComponent)
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    if (GrabComponent)
     {
         GrabComponent->StopPush();
     }
@@ -410,8 +481,8 @@ void AShixunCharacter::OnPushReleased()
 
 void AShixunCharacter::OnPullPressed()
 {
-	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-	if (GrabComponent && GrabComponent->IsGrabbing())
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    if (GrabComponent && GrabComponent->IsGrabbing())
     {
         GrabComponent->StartPull();
     }
@@ -423,8 +494,8 @@ void AShixunCharacter::OnPullPressed()
 
 void AShixunCharacter::OnPullReleased()
 {
-	if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-	if (GrabComponent && GrabComponent->IsGrabbing())
+    if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
+    if (GrabComponent && GrabComponent->IsGrabbing())
     {
         GrabComponent->StopPull();
     }
