@@ -48,23 +48,6 @@ bool UShixunHUD::IsTimeRewindReady() const
     return Char->GetTimeRewindCooldownPercentage() <= 0.0f;
 }
 
-// ===== 视野扫描 CD =====
-float UShixunHUD::GetVisionScanCooldownPercent() const
-{
-    AShixunCharacter* Char = GetPlayerCharacter();
-    if (!Char) return 0.0f;
-    return FMath::GetMappedRangeValueClamped(
-        FVector2D(0.0f, 6.0f), FVector2D(0.0f, 1.0f),
-        Char->VisionScanCooldownRemaining);
-}
-
-bool UShixunHUD::IsVisionScanReady() const
-{
-    AShixunCharacter* Char = GetPlayerCharacter();
-    if (!Char) return false;
-    return Char->VisionScanCooldownRemaining <= 0.0f;
-}
-
 // ===== 磁力抓取 =====
 bool UShixunHUD::IsGrabReady() const
 {
@@ -80,9 +63,4 @@ FLinearColor UShixunHUD::GetTimeRewindIconColor() const
 FLinearColor UShixunHUD::GetGrabIconColor() const
 {
     return FLinearColor::White;
-}
-
-FLinearColor UShixunHUD::GetVisionScanIconColor() const
-{
-    return IsVisionScanReady() ? FLinearColor::White : FLinearColor(0.15f, 0.15f, 0.15f, 1.0f);
 }

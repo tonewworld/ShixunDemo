@@ -44,10 +44,6 @@ AShixunCharacter::AShixunCharacter()
     TimeRewindCooldownRemaining = 0.0f;
 
     CurrentState = EAbilityState::Default;
-    VisionScanDuration = 3.0f;
-    VisionScanCooldown = 3.0f;
-    VisionScanTimer = 0.0f;
-    VisionScanCooldownRemaining = 0.0f;
 }
 
 void AShixunCharacter::BeginPlay()
@@ -101,7 +97,6 @@ void AShixunCharacter::Tick(float DeltaTime)
     switch (CurrentState)
     {
     case EAbilityState::TimeRewind:
-        // 回溯结束检测 → 触发 CD
         if (myTimeComponent)
         {
             bool bIsNowReversing = myTimeComponent->isTimeReversing;
@@ -113,11 +108,9 @@ void AShixunCharacter::Tick(float DeltaTime)
             bWasReversingLastFrame = bIsNowReversing;
         }
 
-        // CD 递减
         if (TimeRewindCooldownRemaining > 0)
             TimeRewindCooldownRemaining -= DeltaTime;
 
-        // 回溯时相机跟随历史朝向
         if (myTimeComponent && myTimeComponent->isTimeReversing && Controller)
         {
             auto TailNode = myTimeComponent->TimeFrames.GetTail();
@@ -128,24 +121,9 @@ void AShixunCharacter::Tick(float DeltaTime)
         }
         break;
 
-    case EAbilityState::VisionScan:
-        VisionScanTimer -= DeltaTime;
-        // 扫描期间每帧检测视野内的隐藏物
-        RevealHiddenObjects(true);
-        if (VisionScanTimer <= 0.0f)
-        {
-            StopVisionScan();
-        }
-
-        VisionScanCooldownRemaining -= DeltaTime;
-        break;
-
     default:
-        // Default: 递减各种 CD
         if (TimeRewindCooldownRemaining > 0)
             TimeRewindCooldownRemaining -= DeltaTime;
-        if (VisionScanCooldownRemaining > 0)
-            VisionScanCooldownRemaining -= DeltaTime;
         break;
     }
 }
@@ -273,7 +251,6 @@ void AShixunCharacter::LookUp(float Value)
 void AShixunCharacter::ApplyDamage(float DamageAmount)
 {
     if (DamageAmount <= 0.0f) return;
-    // 重生无敌保护
     if (bIsRespawning) return;
 
     Health = FMath::Clamp(Health - DamageAmount, 0.0f, MaxHealth);
@@ -281,7 +258,6 @@ void AShixunCharacter::ApplyDamage(float DamageAmount)
 
     UE_LOG(LogTemp, Log, TEXT("受到伤害: %.1f, 当前血量: %.1f/%.1f"), DamageAmount, Health, MaxHealth);
 
-    // 血量归零 → 死亡重生
     if (Health <= 0.0f)
     {
         RespawnAtLastSpawnPoint();
@@ -302,27 +278,22 @@ void AShixunCharacter::RespawnAtLastSpawnPoint()
 {
     UE_LOG(LogTemp, Log, TEXT("玩家死亡，2秒后在重生点复活！"));
 
-    // 临时禁用移动输入
     if (Controller)
     {
         Controller->SetIgnoreMoveInput(true);
     }
 
-    // 标记为重生无敌状态
     bIsRespawning = true;
 
-    // 延迟 2 秒后执行真正的复活
     FTimerHandle RespawnTimerHandle;
     GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &AShixunCharacter::FinishRespawn, 2.0f, false);
 }
 
 void AShixunCharacter::FinishRespawn()
 {
-    // 重置血量
     Health = MaxHealth;
     OnHealthChanged.Broadcast(Health, MaxHealth);
 
-    // 传送回上次记录的重生位置
     SetActorLocation(LastSpawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
     SetActorRotation(LastSpawnRotation);
     if (Controller)
@@ -331,7 +302,6 @@ void AShixunCharacter::FinishRespawn()
         Controller->SetIgnoreMoveInput(false);
     }
 
-    // 退出无敌状态
     bIsRespawning = false;
 
     UE_LOG(LogTemp, Log, TEXT("重生完成！"));
@@ -340,7 +310,6 @@ void AShixunCharacter::FinishRespawn()
 void AShixunCharacter::StartTimeReverse()
 {
     if (InventoryComponent && InventoryComponent->bInventoryOpen) return;
-    // 状态机：其他能力使用中则不可回溯
     if (CurrentState != EAbilityState::Default) return;
     if (TimeRewindCooldownRemaining > 0) return;
 
@@ -356,7 +325,6 @@ void AShixunCharacter::StopTimeReverse()
     if (CurrentState != EAbilityState::TimeRewind) return;
     myTimeComponent->isTimeReversing = false;
     TimeReverseDelegate.Broadcast(false);
-    // 状态在 Tick 中检测到 isTimeReversing=false 时切换为 Default
 }
 
 void AShixunCharacter::OnGrabPressed()
@@ -487,10 +455,6 @@ void AShixunCharacter::OnRotateRightPressed()
     {
         GrabComponent->StartRotateRight();
     }
-    else if (CurrentState == EAbilityState::Default && VisionScanCooldownRemaining <= 0.0f)
-    {
-        StartVisionScan();
-    }
 }
 
 void AShixunCharacter::OnRotateRightReleased()
@@ -499,74 +463,5 @@ void AShixunCharacter::OnRotateRightReleased()
     if (GrabComponent)
     {
         GrabComponent->StopRotateRight();
-    }
-}
-
-// ===== 视野扫描 =====
-void AShixunCharacter::StartVisionScan()
-{
-    CurrentState = EAbilityState::VisionScan;
-    VisionScanTimer = VisionScanDuration;
-    VisionScanCooldownRemaining = VisionScanDuration + VisionScanCooldown;
-    RevealHiddenObjects(true);
-
-    UE_LOG(LogTemp, Log, TEXT("Vision scan started"));
-}
-
-void AShixunCharacter::StopVisionScan()
-{
-    VisionScanTimer = 0.0f;
-    CurrentState = EAbilityState::Default;
-    RevealHiddenObjects(false);
-
-    UE_LOG(LogTemp, Log, TEXT("Vision scan ended"));
-}
-
-void AShixunCharacter::RevealHiddenObjects(bool bReveal)
-{
-    TArray<AActor*> FoundActors;
-    UGameplayStatics::GetAllActorsWithTag(this, FName("HiddenObject"), FoundActors);
-
-    if (bReveal)
-    {
-        // 仅显示屏幕视野内的隐藏物体
-        APlayerController* PC = Cast<APlayerController>(GetController());
-        if (!PC || !GetWorld()) return;
-
-        FVector CamLoc;
-        FRotator CamRot;
-        PC->GetPlayerViewPoint(CamLoc, CamRot);
-        float MaxDistance = 5000.0f;
-        float CosHalfFOV = FMath::Cos(FMath::DegreesToRadians(50.0f));
-
-        for (AActor* Actor : FoundActors)
-        {
-            FVector DirToActor = Actor->GetActorLocation() - CamLoc;
-            float Distance = DirToActor.Size();
-            if (Distance > MaxDistance) continue;
-
-            DirToActor /= Distance;
-            if (FVector::DotProduct(CamRot.Vector(), DirToActor) < CosHalfFOV) continue;
-
-            // 视线检测（无遮挡才显示）
-            FHitResult Hit;
-            FCollisionQueryParams Params;
-            Params.AddIgnoredActor(this);
-            Params.AddIgnoredActor(Actor);
-            if (GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, Actor->GetActorLocation(), ECC_Visibility, Params))
-            {
-                if (Hit.bBlockingHit) continue;
-            }
-
-            Actor->SetActorHiddenInGame(false);
-        }
-    }
-    else
-    {
-        // 扫描结束，全部重新隐藏
-        for (AActor* Actor : FoundActors)
-        {
-            Actor->SetActorHiddenInGame(true);
-        }
     }
 }

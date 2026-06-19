@@ -13,7 +13,6 @@ enum class EAbilityState : uint8
 {
     Default         UMETA(DisplayName = "默认"),
     TimeRewind      UMETA(DisplayName = "时间回溯"),
-    VisionScan      UMETA(DisplayName = "视野扫描"),
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, float, CurrentHealth, float, MaxHealth);
@@ -94,11 +93,6 @@ public:
     void StopTimeReverse();
     FTimeReverseDelegate TimeReverseDelegate;
 
-    // ===== 视野扫描 =====
-    void StartVisionScan();
-    void StopVisionScan();
-    void RevealHiddenObjects(bool bReveal);
-
     // ===== 视角控制 =====
     void Turn(float Value);
     void LookUp(float Value);
@@ -125,19 +119,6 @@ public:
     // ===== 能力状态 =====
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability")
         EAbilityState CurrentState;
-
-    // ===== 视野扫描参数 =====
-    UPROPERTY(EditAnywhere, Category = "VisionScan")
-        float VisionScanDuration;
-
-    UPROPERTY(EditAnywhere, Category = "VisionScan")
-        float VisionScanCooldown;
-
-    UPROPERTY(VisibleAnywhere, Category = "VisionScan")
-        float VisionScanCooldownRemaining;
-
-    UPROPERTY(VisibleAnywhere, Category = "VisionScan")
-        float VisionScanTimer;
 
     // ===== 时间回溯 CD =====
     UPROPERTY(EditAnywhere, Category = "Cooldown")

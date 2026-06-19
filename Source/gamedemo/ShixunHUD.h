@@ -29,13 +29,6 @@ public:
     UFUNCTION(BlueprintPure, Category = "HUD")
     bool IsTimeRewindReady() const;
 
-    // ===== 视野扫描 CD =====
-    UFUNCTION(BlueprintPure, Category = "HUD")
-    float GetVisionScanCooldownPercent() const;
-
-    UFUNCTION(BlueprintPure, Category = "HUD")
-    bool IsVisionScanReady() const;
-
     // ===== 磁力抓取（0 CD） =====
     UFUNCTION(BlueprintPure, Category = "HUD")
     bool IsGrabReady() const;
@@ -46,9 +39,6 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "HUD")
     FLinearColor GetGrabIconColor() const;
-
-    UFUNCTION(BlueprintPure, Category = "HUD")
-    FLinearColor GetVisionScanIconColor() const;
 
 private:
     AShixunCharacter* GetPlayerCharacter() const;
